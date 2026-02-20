@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meal Prep Planner</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#2d6a4f;--green-l:#52b788;--green-d:#1b4332;
+  --amber:#f4a261;--amber-d:#e76f51;
+  --bg:#f4f6f0;--surface:#fff;--text:#1a1e16;--muted:#6b7280;
+  --border:#e2e8d9;--radius:12px;--shadow:0 2px 10px rgba(0,0,0,.08)
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* HEADER */
+header{background:linear-gradient(135deg,var(--green-d),var(--green));color:#fff;padding:1.25rem 2rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 3px 12px rgba(0,0,0,.2)}
+header h1{font-size:1.5rem;font-weight:800;letter-spacing:-.5px}
+header .sub{font-size:.85rem;opacity:.75;margin-top:.1rem}
+
+/* STEP NAV */
+.step-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;max-width:100%}
+.step-btn{flex:1;padding:.9rem .5rem;text-align:center;font-size:.8rem;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;cursor:default;user-select:none;transition:.2s}
+.step-btn .num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--border);color:var(--muted);font-size:.7rem;font-weight:800;margin-right:.35rem}
+.step-btn.active{color:var(--green);border-bottom-color:var(--green)}
+.step-btn.active .num{background:var(--green);color:#fff}
+.step-btn.done{color:var(--green-l);border-bottom-color:var(--green-l)}
+.step-btn.done .num{background:var(--green-l);color:#fff}
+
+/* LAYOUT */
+.main{max-width:960px;margin:1.75rem auto;padding:0 1rem}
+
+/* CARD */
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem;margin-bottom:1.25rem}
+.card-title{font-size:1.1rem;font-weight:800;color:var(--green-d);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.card-title .icon{font-size:1.3rem}
+.section-label{font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem}
+
+/* FORMS */
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1rem}
+.form-group{display:flex;flex-direction:column;gap:.35rem}
+label{font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+input[type=number],input[type=text],input[type=password],select{
+  padding:.6rem .85rem;border:1.5px solid var(--border);border-radius:8px;
+  font-size:.95rem;color:var(--text);background:var(--bg);transition:.2s;width:100%
+}
+input:focus,select:focus{outline:none;border-color:var(--green);background:#fff}
+input[type=range]{width:100%;accent-color:var(--green)}
+.range-row{display:flex;align-items:center;gap:.75rem}
+.range-val{font-weight:800;color:var(--green);font-size:1.1rem;min-width:2rem}
+
+/* PILL CHECKBOXES */
+.pill-group{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem}
+.pill{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .85rem;border:1.5px solid var(--border);border-radius:20px;font-size:.85rem;font-weight:500;cursor:pointer;user-select:none;transition:.2s}
+.pill:hover{border-color:var(--green)}
+.pill.on{background:var(--green);color:#fff;border-color:var(--green)}
+.pill input{display:none}
+
+/* TAG INPUT */
+.tag-wrap{border:1.5px solid var(--border);border-radius:8px;padding:.4rem;display:flex;flex-wrap:wrap;gap:.35rem;min-height:42px;background:var(--bg);cursor:text}
+.tag-wrap:focus-within{border-color:var(--green);background:#fff}
+.tag{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;border-radius:20px;font-size:.8rem;font-weight:600}
+.tag.inc{background:#d1fae5;color:#065f46}
+.tag.exc{background:#fee2e2;color:#991b1b}
+.tag button{background:none;border:none;cursor:pointer;font-size:.9rem;opacity:.6;padding:0;color:inherit;line-height:1}
+.tag button:hover{opacity:1}
+.tag-input{border:none;outline:none;background:transparent;font-size:.875rem;min-width:140px;flex:1;padding:.2rem .3rem}
+
+/* BUTTONS */
+.btn{padding:.65rem 1.4rem;border-radius:8px;border:none;font-size:.95rem;font-weight:700;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:.5rem}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green-d)}
+.btn-accent{background:var(--amber);color:#fff}
+.btn-accent:hover{background:var(--amber-d)}
+.btn-outline{background:transparent;border:2px solid var(--green);color:var(--green)}
+.btn-outline:hover{background:var(--green);color:#fff}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--green);color:var(--green)}
+.btn-sm{padding:.4rem .85rem;font-size:.8rem}
+.btn-group{display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap}
+
+/* RECIPE GRID */
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.85rem}
+.rec-card{border:2px solid var(--border);border-radius:10px;padding:1rem;cursor:pointer;transition:.2s;position:relative}
+.rec-card:hover{border-color:var(--green-l);box-shadow:var(--shadow)}
+.rec-card.sel{border-color:var(--green);background:#f0fdf4}
+.rec-card h4{font-size:.9rem;font-weight:700;margin-bottom:.3rem}
+.rec-meta{font-size:.75rem;color:var(--muted);display:flex;gap:.6rem;margin-bottom:.4rem}
+.rec-tags{display:flex;flex-wrap:wrap;gap:.25rem}
+.rtag{font-size:.65rem;padding:.1rem .45rem;border-radius:20px;font-weight:600;background:#e0e7ff;color:#3730a3}
+.rtag.gf{background:#fef3c7;color:#78350f}
+.rtag.df{background:#dbeafe;color:#1e3a8a}
+.rtag.veg{background:#d1fae5;color:#065f46}
+.rtag.vgn{background:#fce7f3;color:#831843}
+.sel-badge{position:absolute;top:.5rem;right:.5rem;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800}
+.swap-btn{position:absolute;bottom:.5rem;right:.5rem;font-size:.7rem;padding:.2rem .5rem}
+
+/* MEAL PLAN TABLE */
+.week-block{margin-bottom:2rem}
+.week-header{font-size:.95rem;font-weight:800;color:var(--green-d);padding:.6rem .75rem;background:#ecfdf5;border-radius:8px;margin-bottom:.75rem;border-left:4px solid var(--green)}
+.meal-row{display:grid;grid-template-columns:90px 80px 1fr 1fr 1fr;gap:.5rem;align-items:center;padding:.45rem .5rem;border-radius:6px}
+.meal-row:nth-child(even){background:#fafafa}
+.day-lbl{font-size:.75rem;font-weight:700;color:var(--muted)}
+.meal-type{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af}
+.mc{font-size:.8rem;padding:.3rem .6rem;border-radius:6px;font-weight:600;cursor:pointer}
+.mc:hover{opacity:.85}
+.mc.p{background:#fde8d8;color:#9a3412}
+.mc.c{background:#fef9c3;color:#713f12}
+.mc.v{background:#d1fae5;color:#065f46}
+.plan-legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.78rem;margin-bottom:1rem}
+.leg{display:flex;align-items:center;gap:.35rem}
+.leg-dot{width:10px;height:10px;border-radius:3px}
+
+/* SHOPPING LIST */
+.shop-cat{margin-bottom:1.25rem}
+.shop-cat-title{font-size:.875rem;font-weight:800;padding:.5rem .75rem;background:#f0fdf4;border-radius:8px;margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem;color:var(--green-d)}
+.shop-item{display:grid;grid-template-columns:1fr auto auto;gap:.75rem;padding:.55rem .75rem;border-bottom:1px solid #f0f0f0;align-items:center}
+.shop-item:last-child{border-bottom:none}
+.shop-item-name{font-size:.9rem;font-weight:500}
+.shop-item-qty{font-size:.8rem;color:var(--muted)}
+.price-inp{border:none;background:none;font-size:.875rem;font-weight:700;color:var(--green);width:70px;text-align:right;cursor:pointer;padding:.15rem .25rem;border-bottom:1px dashed var(--green-l);font-family:inherit}
+.price-inp:focus{outline:none;background:#f0fdf4}
+.total-bar{background:var(--green-d);color:#fff;padding:1.25rem 1.5rem;border-radius:var(--radius);display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;flex-wrap:wrap;gap:.75rem}
+.total-bar .t-num{font-size:1.6rem;font-weight:800}
+.total-bar .t-sub{font-size:.8rem;opacity:.75;margin-top:.2rem}
+.budget-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.2);margin-top:.5rem;overflow:hidden}
+.budget-fill{height:100%;border-radius:4px;background:var(--green-l);transition:width .5s}
+.budget-fill.over{background:#ef4444}
+
+/* STAT BOXES */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.75rem;margin-bottom:1.25rem}
+.stat{background:#f0fdf4;border-radius:10px;padding:.85rem;text-align:center}
+.stat-val{font-size:1.5rem;font-weight:800;color:var(--green)}
+.stat-lbl{font-size:.7rem;color:var(--muted);margin-top:.15rem}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999;padding:1rem}
+.modal{background:#fff;border-radius:var(--radius);max-width:580px;width:100%;max-height:90vh;overflow-y:auto;padding:1.5rem}
+.modal h2{font-size:1.2rem;font-weight:800;color:var(--green-d);margin-bottom:.4rem}
+.modal-meta{display:flex;gap:1.25rem;font-size:.8rem;color:var(--muted);margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.modal h3{font-size:.9rem;font-weight:700;color:var(--green);margin:.75rem 0 .5rem}
+.ing-list{list-style:none;font-size:.875rem}
+.ing-list li{padding:.35rem 0;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between}
+.ing-list li:last-child{border-bottom:none}
+.ing-qty{color:var(--muted);font-weight:600}
+.step-list{list-style:none;counter-reset:s}
+.step-list li{counter-increment:s;display:flex;gap:.75rem;padding:.6rem 0;font-size:.875rem;border-bottom:1px solid #f0f0f0}
+.step-list li:last-child{border-bottom:none}
+.step-list li::before{content:counter(s);min-width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;flex-shrink:0}
+.modal-close{float:right;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);line-height:1;margin-left:.5rem}
+.modal-close:hover{color:var(--text)}
+
+/* ALERTS */
+.alert{padding:.75rem 1rem;border-radius:8px;font-size:.85rem;margin-bottom:1rem}
+.alert-info{background:#dbeafe;color:#1e3a5f;border-left:4px solid #3b82f6}
+.alert-warn{background:#fef9c3;color:#713f12;border-left:4px solid #eab308}
+.alert-ok{background:#d1fae5;color:#065f46;border-left:4px solid #22c55e}
+
+/* DETAILS (API key) */
+details{border:1.5px solid var(--border);border-radius:8px;padding:.75rem}
+details summary{cursor:pointer;font-size:.85rem;font-weight:600;color:var(--muted);user-select:none;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:'▶ ';font-size:.7rem}
+details[open] summary::before{content:'▼ '}
+details summary:hover{color:var(--green)}
+details .detail-body{margin-top:.75rem}
+
+.hidden{display:none!important}
+
+@media(max-width:640px){
+  header{padding:1rem}
+  header h1{font-size:1.2rem}
+  .step-btn{font-size:.65rem;padding:.75rem .25rem}
+  .meal-row{grid-template-columns:60px 55px 1fr 1fr;font-size:.75rem}
+  .meal-row .mc.v{grid-column:3/span 2}
+}
+@media print{
+  header,.step-nav,.btn-group,#step1,#step2,#step3{display:none!important}
+  #step4{display:block!important}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:2rem">🥗</span>
+  <div>
+    <h1>Meal Prep Planner</h1>
+    <div class="sub">Budget-smart • Mix &amp; match • Full recipes</div>
+  </div>
+</header>
+
+<nav class="step-nav" id="stepNav"></nav>
+
+<main class="main" id="root"></main>
+
+<div id="modalRoot"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  RECIPE DATABASE
+// ═══════════════════════════════════════════════════════════
+// Each ingredient: { n: name, q: qty, u: unit, c: category, p: price-per-unit }
+// Categories: meat | produce | dairy | pantry
+// Tags: gf=gluten-free, df=dairy-free, veg=vegetarian, vgn=vegan
+
+const DB = {
+
+proteins: [
+{
+  id:'baked-chicken', name:'Baked Chicken Breast',
+  tags:['gf','df'], prep:10, cook:25, servings:4,
+  ingredients:[
+    {n:'boneless skinless chicken breast',q:2,u:'lbs',c:'meat',p:5.49},
+    {n:'olive oil',q:2,u:'tbsp',c:'pantry',p:0.25},
+    {n:'garlic powder',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'smoked paprika',q:1,u:'tsp',c:'pantry',p:0.06},
+    {n:'Italian seasoning',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'salt',q:1,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Preheat oven to 400°F (200°C). Line a baking sheet with foil or parchment.',
+    'Pat chicken breasts dry with paper towels. If thick, pound to an even 3/4-inch thickness for uniform cooking.',
+    'Drizzle olive oil over chicken and rub all over. Combine garlic powder, paprika, Italian seasoning, salt, and pepper, then sprinkle evenly on both sides.',
+    'Place on prepared baking sheet. Bake 22–26 minutes until internal temp reaches 165°F. Thinner breasts need less time.',
+    'Rest 5 minutes before slicing. Slice against the grain for best texture.',
+    'Cool completely before portioning into meal-prep containers. Refrigerates 4–5 days.'
+  ]
+},
+{
+  id:'turkey-taco', name:'Ground Turkey Taco Meat',
+  tags:['gf','df'], prep:10, cook:20, servings:6,
+  ingredients:[
+    {n:'lean ground turkey',q:2,u:'lbs',c:'meat',p:4.99},
+    {n:'yellow onion',q:1,u:'each',c:'produce',p:0.89},
+    {n:'garlic cloves',q:3,u:'each',c:'produce',p:0.15},
+    {n:'taco seasoning',q:2,u:'packets',c:'pantry',p:1.49},
+    {n:'tomato paste',q:2,u:'tbsp',c:'pantry',p:0.30},
+    {n:'olive oil',q:1,u:'tbsp',c:'pantry',p:0.12},
+    {n:'water',q:.25,u:'cup',c:'pantry',p:0}
+  ],
+  steps:[
+    'Dice the onion and mince the garlic.',
+    'Heat olive oil in a large skillet over medium-high heat. Add onion and cook 3–4 minutes until softened.',
+    'Add garlic and cook 1 minute more until fragrant.',
+    'Add ground turkey, breaking apart with a wooden spoon. Cook 7–9 minutes until no pink remains.',
+    'Drain any excess liquid from the pan.',
+    'Stir in taco seasoning, tomato paste, and 1/4 cup water. Simmer 3–4 minutes until thickened and well-combined.',
+    'Taste and adjust salt. Cool before portioning. Great over rice, in bowls, or with tortillas.'
+  ]
+},
+{
+  id:'pulled-pork', name:'Slow Cooker Pulled Pork',
+  tags:['gf','df'], prep:15, cook:480, servings:8,
+  ingredients:[
+    {n:'pork shoulder (bone-in or boneless)',q:3,u:'lbs',c:'meat',p:3.49},
+    {n:'BBQ sauce',q:1,u:'cup',c:'pantry',p:1.50},
+    {n:'apple cider vinegar',q:.25,u:'cup',c:'pantry',p:0.50},
+    {n:'brown sugar',q:2,u:'tbsp',c:'pantry',p:0.15},
+    {n:'smoked paprika',q:2,u:'tsp',c:'pantry',p:0.12},
+    {n:'garlic powder',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'onion powder',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'cumin',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'salt',q:1.5,u:'tsp',c:'pantry',p:0.02},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Combine smoked paprika, garlic powder, onion powder, cumin, brown sugar, salt, and pepper. Rub all over the pork shoulder.',
+    'Place seasoned pork in the slow cooker. Pour apple cider vinegar around the base.',
+    'Cook on LOW for 8–9 hours or HIGH for 4–5 hours until the pork is fork-tender and pulls apart easily.',
+    'Transfer pork to a cutting board. Discard excess liquid (or reserve 1/2 cup for flavor).',
+    'Shred pork using two forks, pulling against the grain. Remove any large fat pieces.',
+    'Return shredded pork to slow cooker, add BBQ sauce, and stir to combine. Keep warm 15 minutes on LOW.',
+    'Portion into containers. Refrigerates 5 days, freezes up to 3 months. Great on rice, potatoes, or in sandwiches.'
+  ]
+},
+{
+  id:'baked-salmon', name:'Lemon Garlic Baked Salmon',
+  tags:['gf','df'], prep:10, cook:15, servings:4,
+  ingredients:[
+    {n:'salmon fillet (skin-on)',q:2,u:'lbs',c:'meat',p:9.99},
+    {n:'olive oil',q:2,u:'tbsp',c:'pantry',p:0.25},
+    {n:'lemon',q:1,u:'each',c:'produce',p:0.89},
+    {n:'garlic cloves',q:3,u:'each',c:'produce',p:0.15},
+    {n:'fresh dill (or 1 tsp dried)',q:2,u:'tbsp',c:'produce',p:0.50},
+    {n:'salt',q:1,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Preheat oven to 400°F. Line a baking sheet with foil, lightly greased.',
+    'Pat salmon dry with paper towels. Place skin-side down on prepared pan.',
+    'Mince garlic and mix with olive oil. Brush generously over salmon.',
+    'Squeeze half the lemon over the fish. Season with salt, pepper, and dill. Slice remaining lemon half and lay slices on top.',
+    'Bake 12–15 minutes depending on thickness (1 inch = 12–13 min). Salmon is done when it flakes easily with a fork and is opaque through.',
+    'Cool before portioning. Refrigerates 3–4 days. Eat cold or gently reheated — do not microwave more than 60 seconds at 50% power.'
+  ]
+},
+{
+  id:'honey-garlic-thighs', name:'Honey Garlic Chicken Thighs',
+  tags:['gf','df'], prep:10, cook:30, servings:6,
+  ingredients:[
+    {n:'bone-in skin-on chicken thighs',q:3,u:'lbs',c:'meat',p:3.99},
+    {n:'honey',q:3,u:'tbsp',c:'pantry',p:0.45},
+    {n:'soy sauce (or tamari for GF)',q:3,u:'tbsp',c:'pantry',p:0.30},
+    {n:'garlic cloves',q:4,u:'each',c:'produce',p:0.20},
+    {n:'apple cider vinegar',q:1,u:'tbsp',c:'pantry',p:0.12},
+    {n:'olive oil',q:1,u:'tbsp',c:'pantry',p:0.12},
+    {n:'red pepper flakes',q:.25,u:'tsp',c:'pantry',p:0.02},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Preheat oven to 425°F. Pat chicken thighs very dry — this is key for crispy skin.',
+    'Season thighs on both sides with salt and pepper.',
+    'In an oven-safe skillet or cast iron, heat olive oil over medium-high. Sear thighs skin-side down 5–7 minutes until deeply golden. Flip and sear 2 minutes.',
+    'While searing, mince garlic and mix with honey, soy sauce, vinegar, and red pepper flakes.',
+    'Pour sauce over chicken. Transfer skillet to oven and roast 20–25 minutes until internal temp hits 165°F and skin is caramelized.',
+    'Baste with pan sauce halfway through roasting for extra glaze.',
+    'Cool before portioning. The sauce firms up in the fridge and reheats beautifully. Refrigerates 4–5 days.'
+  ]
+},
+{
+  id:'turkey-meatballs', name:'Turkey Meatballs with Marinara',
+  tags:['df'], prep:20, cook:25, servings:6,
+  ingredients:[
+    {n:'lean ground turkey',q:2,u:'lbs',c:'meat',p:4.99},
+    {n:'plain breadcrumbs',q:.5,u:'cup',c:'pantry',p:0.40},
+    {n:'eggs',q:2,u:'each',c:'dairy',p:0.67},
+    {n:'garlic cloves',q:4,u:'each',c:'produce',p:0.20},
+    {n:'Italian seasoning',q:2,u:'tsp',c:'pantry',p:0.10},
+    {n:'fennel seeds',q:.5,u:'tsp',c:'pantry',p:0.04},
+    {n:'salt',q:1,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02},
+    {n:'marinara sauce',q:1,u:'jar',c:'pantry',p:2.99},
+    {n:'olive oil',q:2,u:'tbsp',c:'pantry',p:0.25}
+  ],
+  steps:[
+    'Preheat oven to 400°F. Line a large baking sheet with foil and brush lightly with oil.',
+    'Mince garlic. In a large bowl, combine ground turkey, breadcrumbs, eggs, garlic, Italian seasoning, fennel seeds, salt, and pepper. Mix gently — overmixing makes tough meatballs.',
+    'Using a scoop or tablespoon, form into 1.5-inch balls (about 30–34 meatballs). Place on prepared sheet.',
+    'Bake 18–22 minutes until cooked through (165°F internal) and lightly browned.',
+    'Warm marinara in a large pot over medium heat. Add cooked meatballs and simmer 5 minutes to meld flavors.',
+    'Portion meatballs with sauce into containers. Great over pasta, rice, zucchini noodles, or on their own. Refrigerates 5 days, freezes great.'
+  ]
+},
+{
+  id:'teriyaki-beef', name:'Teriyaki Beef Strips',
+  tags:[], prep:15, cook:15, servings:5,
+  ingredients:[
+    {n:'beef sirloin or flank steak',q:2,u:'lbs',c:'meat',p:7.99},
+    {n:'soy sauce',q:.25,u:'cup',c:'pantry',p:0.60},
+    {n:'honey',q:3,u:'tbsp',c:'pantry',p:0.45},
+    {n:'sesame oil',q:1,u:'tbsp',c:'pantry',p:0.40},
+    {n:'garlic cloves',q:3,u:'each',c:'produce',p:0.15},
+    {n:'fresh ginger (or .5 tsp ground)',q:1,u:'tsp',c:'produce',p:0.20},
+    {n:'cornstarch',q:1,u:'tbsp',c:'pantry',p:0.05},
+    {n:'sesame seeds',q:1,u:'tbsp',c:'pantry',p:0.15},
+    {n:'green onions',q:2,u:'each',c:'produce',p:0.25}
+  ],
+  steps:[
+    'Slice beef against the grain into thin strips (about 1/4 inch). If beef is slightly frozen, it slices more easily.',
+    'Mince garlic and grate ginger. Mix soy sauce, honey, sesame oil, garlic, ginger, and cornstarch in a bowl to make the teriyaki sauce.',
+    'Toss beef strips with half the sauce and marinate at least 10 minutes (up to 2 hours in the fridge for deeper flavor).',
+    'Heat a large skillet or wok over HIGH heat until very hot. Add beef in a single layer — do not crowd. Work in batches if needed.',
+    'Sear 1–2 minutes per side without stirring much for a good sear. Add remaining sauce and toss 1 minute.',
+    'Garnish with sesame seeds and sliced green onions.',
+    'Cool before portioning. Refrigerates 4 days. Reheat in a pan with a splash of water, or microwave 60–90 seconds.'
+  ]
+},
+{
+  id:'baked-tilapia', name:'Herb-Crusted Baked Tilapia',
+  tags:['gf','df'], prep:10, cook:15, servings:4,
+  ingredients:[
+    {n:'tilapia fillets',q:2,u:'lbs',c:'meat',p:6.99},
+    {n:'olive oil',q:2,u:'tbsp',c:'pantry',p:0.25},
+    {n:'lemon',q:1,u:'each',c:'produce',p:0.89},
+    {n:'garlic powder',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'paprika',q:.5,u:'tsp',c:'pantry',p:0.04},
+    {n:'dried oregano',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Preheat oven to 400°F. Line a baking sheet with foil and spray lightly with oil.',
+    'Pat tilapia fillets completely dry with paper towels and lay on prepared baking sheet.',
+    'Drizzle olive oil evenly over fillets.',
+    'Mix garlic powder, paprika, oregano, salt, and pepper. Sprinkle evenly over fish.',
+    'Squeeze lemon juice over the top.',
+    'Bake 12–15 minutes until fish is opaque and flakes easily with a fork. Do not overbake.',
+    'Cool before portioning. Tilapia is delicate — store flat in containers and refrigerate up to 3 days.'
+  ]
+}
+], // end proteins
+
+carbSides: [
+{
+  id:'white-rice', name:'Fluffy White Rice',
+  tags:['gf','df','veg','vgn'], prep:5, cook:20, servings:6,
+  ingredients:[
+    {n:'long-grain white rice',q:2,u:'cups',c:'pantry',p:0.50},
+    {n:'water or low-sodium chicken broth',q:3.5,u:'cups',c:'pantry',p:0.20},
+    {n:'butter or olive oil',q:1,u:'tbsp',c:'dairy',p:0.12},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01}
+  ],
+  steps:[
+    'Rinse rice in a fine-mesh strainer under cold water for 30–60 seconds. This removes starch and prevents clumping.',
+    'In a medium saucepan, combine rice, water (or broth), butter, and salt. Bring to a boil over high heat.',
+    'Once boiling, stir once, reduce heat to LOW, and cover tightly.',
+    'Cook 18 minutes without lifting the lid.',
+    'Remove from heat, still covered, and let steam 5 more minutes.',
+    'Fluff with a fork. Portion into containers. Refrigerates 5 days. Reheat with a splash of water to restore moisture.'
+  ]
+},
+{
+  id:'sweet-potatoes', name:'Roasted Sweet Potatoes',
+  tags:['gf','df','veg','vgn'], prep:10, cook:35, servings:6,
+  ingredients:[
+    {n:'sweet potatoes',q:3,u:'lbs',c:'produce',p:1.49},
+    {n:'olive oil',q:2.5,u:'tbsp',c:'pantry',p:0.30},
+    {n:'smoked paprika',q:.5,u:'tsp',c:'pantry',p:0.04},
+    {n:'garlic powder',q:.5,u:'tsp',c:'pantry',p:0.03},
+    {n:'salt',q:1,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Preheat oven to 425°F. Line two baking sheets with parchment (don\'t crowd or they steam instead of roast).',
+    'Peel and cut sweet potatoes into 1-inch cubes. Uniform size = even cooking.',
+    'Toss with olive oil, paprika, garlic powder, salt, and pepper until well-coated.',
+    'Spread in a single layer on baking sheets with space between pieces.',
+    'Roast 30–35 minutes, flipping once at the 20-minute mark, until golden and caramelized on edges.',
+    'Cool before portioning. Refrigerates 5 days. Reheats well in microwave or 5 minutes in air fryer to re-crisp.'
+  ]
+},
+{
+  id:'mashed-potatoes', name:'Garlic Mashed Potatoes',
+  tags:['gf','veg'], prep:15, cook:25, servings:6,
+  ingredients:[
+    {n:'russet potatoes',q:3,u:'lbs',c:'produce',p:1.29},
+    {n:'butter',q:4,u:'tbsp',c:'dairy',p:0.48},
+    {n:'whole milk or half-and-half',q:.5,u:'cup',c:'dairy',p:0.45},
+    {n:'garlic cloves',q:4,u:'each',c:'produce',p:0.20},
+    {n:'salt',q:1.5,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02},
+    {n:'sour cream (optional)',q:2,u:'tbsp',c:'dairy',p:0.30}
+  ],
+  steps:[
+    'Peel potatoes and cut into 1.5-inch chunks. Mince garlic.',
+    'Place potatoes in a large pot, cover with cold water by 1 inch, and add 1 tsp salt. Bring to a boil.',
+    'Cook 15–18 minutes until very tender when pierced with a fork.',
+    'Meanwhile, warm butter, milk, and garlic together in a small saucepan over low heat until butter melts.',
+    'Drain potatoes well, then return to the hot pot. Let sit 1–2 minutes to steam off excess water — this makes them fluffier.',
+    'Mash with a potato masher (not a mixer — over-mixing makes gluey potatoes). Pour in warm butter-milk mixture and fold in.',
+    'Add sour cream if using, season with remaining salt and pepper. Refrigerates 4 days. Reheat with a splash of milk and stir.'
+  ]
+},
+{
+  id:'brown-rice', name:'Brown Rice Pilaf',
+  tags:['gf','df','veg','vgn'], prep:5, cook:45, servings:6,
+  ingredients:[
+    {n:'long-grain brown rice',q:2,u:'cups',c:'pantry',p:0.80},
+    {n:'low-sodium chicken or vegetable broth',q:4,u:'cups',c:'pantry',p:0.80},
+    {n:'olive oil',q:1,u:'tbsp',c:'pantry',p:0.12},
+    {n:'garlic powder',q:.5,u:'tsp',c:'pantry',p:0.03},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01}
+  ],
+  steps:[
+    'Rinse brown rice under cold water for 1 minute.',
+    'In a medium saucepan, heat olive oil over medium heat. Add rice and toast, stirring, 2 minutes until fragrant.',
+    'Add broth, garlic powder, and salt. Bring to a boil.',
+    'Reduce to lowest heat setting, cover tightly, and cook 40–45 minutes.',
+    'Remove from heat without uncovering and rest 10 minutes.',
+    'Fluff with a fork. Brown rice holds up better for meal prep than white rice. Refrigerates 5–6 days.'
+  ]
+},
+{
+  id:'pasta-marinara', name:'Penne with Marinara',
+  tags:['veg'], prep:5, cook:20, servings:6,
+  ingredients:[
+    {n:'penne pasta',q:1,u:'lb',c:'pantry',p:1.49},
+    {n:'marinara sauce',q:1,u:'jar',c:'pantry',p:2.99},
+    {n:'olive oil',q:2,u:'tbsp',c:'pantry',p:0.25},
+    {n:'garlic cloves',q:3,u:'each',c:'produce',p:0.15},
+    {n:'Italian seasoning',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'salt',q:1,u:'tbsp',c:'pantry',p:0.01},
+    {n:'parmesan cheese (optional)',q:.25,u:'cup',c:'dairy',p:0.75}
+  ],
+  steps:[
+    'Bring a large pot of water to a boil. Salt generously (it should taste like the sea).',
+    'Cook penne 1–2 minutes LESS than package directions — it will finish cooking in the sauce.',
+    'Reserve 1/2 cup pasta water before draining.',
+    'In a large skillet, heat olive oil over medium. Add minced garlic and Italian seasoning, cook 1 minute.',
+    'Add marinara and let bubble 3–4 minutes.',
+    'Add drained pasta to the skillet with a splash of pasta water. Toss and cook together 2 minutes until sauce clings to pasta.',
+    'Top with parmesan if using. Cool before portioning. Refrigerates 4–5 days. Add a splash of water when reheating to loosen sauce.'
+  ]
+},
+{
+  id:'quinoa', name:'Herb Quinoa',
+  tags:['gf','df','veg','vgn'], prep:5, cook:20, servings:6,
+  ingredients:[
+    {n:'quinoa',q:2,u:'cups',c:'pantry',p:3.00},
+    {n:'low-sodium chicken or vegetable broth',q:3.5,u:'cups',c:'pantry',p:0.70},
+    {n:'olive oil',q:1,u:'tbsp',c:'pantry',p:0.12},
+    {n:'garlic cloves',q:2,u:'each',c:'produce',p:0.10},
+    {n:'dried parsley',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01},
+    {n:'lemon',q:.5,u:'each',c:'produce',p:0.45}
+  ],
+  steps:[
+    'Rinse quinoa under cold water in a fine-mesh strainer for 30 seconds to remove bitter coating.',
+    'In a saucepan, heat olive oil over medium. Add minced garlic and cook 1 minute.',
+    'Add quinoa and toast 2 minutes, stirring.',
+    'Add broth, parsley, and salt. Bring to a boil.',
+    'Reduce heat to low, cover, and cook 15 minutes until liquid is absorbed.',
+    'Remove from heat, covered, rest 5 minutes. Fluff and squeeze lemon juice over top.',
+    'Quinoa is high protein and holds up very well for meal prep. Refrigerates 5–6 days.'
+  ]
+}
+], // end carbSides
+
+veggieSides: [
+{
+  id:'roasted-broccoli', name:'Roasted Garlic Broccoli',
+  tags:['gf','df','veg','vgn'], prep:10, cook:22, servings:6,
+  ingredients:[
+    {n:'broccoli florets',q:2,u:'lbs',c:'produce',p:1.99},
+    {n:'olive oil',q:3,u:'tbsp',c:'pantry',p:0.36},
+    {n:'garlic cloves',q:4,u:'each',c:'produce',p:0.20},
+    {n:'lemon',q:.5,u:'each',c:'produce',p:0.45},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02},
+    {n:'red pepper flakes',q:.25,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Preheat oven to 425°F. Cut broccoli into even-sized florets and dry completely — wet broccoli steams, not roasts.',
+    'Toss florets with olive oil, sliced garlic, salt, pepper, and red pepper flakes.',
+    'Spread on a baking sheet in a single layer with space between pieces.',
+    'Roast 20–22 minutes, tossing once at 12 minutes, until edges are crispy and slightly charred.',
+    'Remove from oven and squeeze lemon juice over top. The slight char is where the flavor is — don\'t fear it!',
+    'Refrigerates 4 days. Reheat in air fryer or oven at 375°F for 5 minutes to restore crispiness.'
+  ]
+},
+{
+  id:'green-beans', name:'Garlic Green Beans',
+  tags:['gf','df','veg','vgn'], prep:10, cook:12, servings:6,
+  ingredients:[
+    {n:'fresh green beans',q:2,u:'lbs',c:'produce',p:2.49},
+    {n:'olive oil',q:2,u:'tbsp',c:'pantry',p:0.25},
+    {n:'garlic cloves',q:3,u:'each',c:'produce',p:0.15},
+    {n:'sliced almonds',q:.25,u:'cup',c:'pantry',p:0.75},
+    {n:'lemon zest',q:1,u:'tsp',c:'produce',p:0.10},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.25,u:'tsp',c:'pantry',p:0.01}
+  ],
+  steps:[
+    'Trim the stem ends off green beans. Leave whole or cut in half.',
+    'Bring a pot of salted water to a boil. Blanch green beans 3–4 minutes until bright green and just tender.',
+    'Drain and immediately plunge into ice water (a bowl of cold water with ice) for 2 minutes. This stops cooking and keeps them bright.',
+    'Drain and dry completely.',
+    'Heat olive oil in a large skillet over medium-high. Add garlic and almonds, toast 1–2 minutes until golden.',
+    'Add green beans, toss to coat, cook 2–3 minutes. Season with salt, pepper, and lemon zest.',
+    'Refrigerates 4 days. These reheat well in a pan — avoid microwaving if you want texture.'
+  ]
+},
+{
+  id:'brussels-sprouts', name:'Roasted Brussels Sprouts',
+  tags:['gf','df','veg','vgn'], prep:10, cook:25, servings:6,
+  ingredients:[
+    {n:'Brussels sprouts',q:2,u:'lbs',c:'produce',p:2.99},
+    {n:'olive oil',q:3,u:'tbsp',c:'pantry',p:0.36},
+    {n:'balsamic vinegar',q:1.5,u:'tbsp',c:'pantry',p:0.45},
+    {n:'garlic powder',q:.5,u:'tsp',c:'pantry',p:0.03},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Preheat oven to 425°F. Trim stem ends of Brussels sprouts and cut in half lengthwise.',
+    'Remove any yellow outer leaves.',
+    'Toss with olive oil, balsamic vinegar, garlic powder, salt, and pepper until every sprout is well-coated.',
+    'Place cut-side DOWN on a large baking sheet. This is critical — the flat side caramelizes against the hot pan.',
+    'Do not crowd — use two pans if needed. Roast 22–26 minutes until deeply browned and tender inside.',
+    'Don\'t stir until the last 5 minutes so the cut side gets properly caramelized.',
+    'Refrigerates 4 days. These are one of the best meal-prep veggies — they hold up well and taste even better the next day.'
+  ]
+},
+{
+  id:'zucchini', name:'Sautéed Zucchini & Squash',
+  tags:['gf','df','veg','vgn'], prep:10, cook:12, servings:6,
+  ingredients:[
+    {n:'zucchini',q:2,u:'lbs',c:'produce',p:1.49},
+    {n:'yellow squash',q:1,u:'lb',c:'produce',p:1.29},
+    {n:'olive oil',q:2,u:'tbsp',c:'pantry',p:0.25},
+    {n:'garlic cloves',q:3,u:'each',c:'produce',p:0.15},
+    {n:'Italian seasoning',q:1,u:'tsp',c:'pantry',p:0.05},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02},
+    {n:'lemon',q:.5,u:'each',c:'produce',p:0.45}
+  ],
+  steps:[
+    'Slice zucchini and squash into half-moons about 1/2 inch thick. Don\'t go thinner or they\'ll get mushy.',
+    'Heat a large skillet over HIGH heat until very hot. This is important to get a sear, not steam.',
+    'Add olive oil, then add zucchini and squash in a single layer. Do NOT stir for 2–3 minutes — let them develop color.',
+    'Add sliced garlic and Italian seasoning. Toss and cook 3–4 more minutes, stirring occasionally.',
+    'Season with salt, pepper, and a squeeze of lemon at the end.',
+    'The key: don\'t overcook. They should be tender-crisp, not soft. Refrigerates 3–4 days.'
+  ]
+},
+{
+  id:'asparagus', name:'Roasted Asparagus',
+  tags:['gf','df','veg','vgn'], prep:8, cook:15, servings:6,
+  ingredients:[
+    {n:'asparagus',q:2,u:'lbs',c:'produce',p:3.49},
+    {n:'olive oil',q:2,u:'tbsp',c:'pantry',p:0.25},
+    {n:'lemon',q:1,u:'each',c:'produce',p:0.89},
+    {n:'garlic cloves',q:2,u:'each',c:'produce',p:0.10},
+    {n:'salt',q:.75,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Preheat oven to 425°F. Wash asparagus and snap off the woody ends (they\'ll break naturally at the right point).',
+    'Pat dry completely.',
+    'Toss asparagus with olive oil, minced garlic, salt, and pepper.',
+    'Spread in a single layer on a baking sheet. Thin spears: 10–12 min. Thick spears: 14–16 min.',
+    'Roast until tips are crispy and stalks are tender when pierced.',
+    'Squeeze fresh lemon juice over immediately after coming out of the oven.',
+    'Best eaten within 3 days — asparagus loses its vibrant color but still tastes great.'
+  ]
+},
+{
+  id:'bell-peppers', name:'Roasted Bell Peppers & Onions',
+  tags:['gf','df','veg','vgn'], prep:12, cook:30, servings:6,
+  ingredients:[
+    {n:'bell peppers (mixed colors)',q:5,u:'each',c:'produce',p:1.49},
+    {n:'yellow onions',q:2,u:'each',c:'produce',p:0.89},
+    {n:'olive oil',q:3,u:'tbsp',c:'pantry',p:0.36},
+    {n:'Italian seasoning',q:1.5,u:'tsp',c:'pantry',p:0.07},
+    {n:'garlic powder',q:.5,u:'tsp',c:'pantry',p:0.03},
+    {n:'salt',q:1,u:'tsp',c:'pantry',p:0.01},
+    {n:'black pepper',q:.5,u:'tsp',c:'pantry',p:0.02}
+  ],
+  steps:[
+    'Preheat oven to 425°F.',
+    'Slice peppers into 1/2-inch strips, removing seeds and membranes. Slice onions into 1/2-inch half-moons.',
+    'Toss vegetables with olive oil, Italian seasoning, garlic powder, salt, and pepper.',
+    'Spread in a single layer across two baking sheets — overcrowding causes steaming.',
+    'Roast 25–30 minutes, tossing once halfway, until edges are caramelized and slightly charred.',
+    'These are incredibly versatile — serve alongside any protein, in wraps, over rice, or in eggs.',
+    'Refrigerates 5 days. These actually improve overnight as flavors meld.'
+  ]
+}
+] // end veggieSides
+
+}; // end DB
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+const S = {
+  step: 1,
+  adults: 3,
+  kids: 2,
+  meals: ['lunch','dinner'],
+  weeks: 2,
+  budget: 200,
+  dietary: new Set(),
+  include: [],
+  exclude: [],
+  apiKey: localStorage.getItem('mpp_key')||'',
+  selected: { protein:[], carb:[], veggie:[] },
+  mealPlan: [],
+  shopping: {},
+  totalCost: 0,
+  editedPrices: {}
+};
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function totalPeople(){ return S.adults + S.kids * 0.5 }
+function totalMealSlots(){ return S.weeks * 7 * S.meals.length }
+function fmtTime(m){ return m>=60?`${Math.floor(m/60)}h ${m%60>0?m%60+'m':''}`:`${m}m` }
+function fmtQty(q){
+  if(q===Math.round(q)) return q.toString();
+  if(Math.abs(q-Math.round(q*2)/2)<.01) return (Math.round(q*2)/2).toString();
+  return q.toFixed(1);
+}
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+  return a;
+}
+function filterRecipes(type){
+  return DB[type+'s'].filter(r=>{
+    const d=S.dietary;
+    if(d.has('gf')&&!r.tags.includes('gf')) return false;
+    if(d.has('df')&&!r.tags.includes('df')) return false;
+    if(d.has('veg')&&!r.tags.includes('veg')) return false;
+    if(d.has('vgn')&&!r.tags.includes('vgn')) return false;
+    const ingNames=r.ingredients.map(i=>i.n.toLowerCase());
+    for(const ex of S.exclude){
+      if(ingNames.some(n=>n.includes(ex.toLowerCase()))) return false;
+    }
+    return true;
+  });
+}
+function countNeeded(){
+  const slots=totalMealSlots();
+  if(S.weeks<=2) return 3;
+  if(S.weeks<=3) return 4;
+  return 5;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ALGORITHM
+// ═══════════════════════════════════════════════════════════
+function autoSelect(){
+  const n=countNeeded();
+  ['protein','carb','veggie'].forEach(type=>{
+    const pool=filterRecipes(type);
+    // prefer recipes containing include ingredients
+    const inc=S.include.map(s=>s.toLowerCase());
+    const scored=pool.map(r=>({
+      r,
+      score: inc.length ? r.ingredients.filter(i=>inc.some(s=>i.n.toLowerCase().includes(s))).length : 0
+    })).sort((a,b)=>b.score-a.score);
+    const chosen=scored.slice(0,n).map(x=>x.r);
+    // if not enough, pad with random
+    if(chosen.length<Math.min(n,pool.length)){
+      const rest=pool.filter(r=>!chosen.includes(r));
+      chosen.push(...shuffle(rest).slice(0,n-chosen.length));
+    }
+    S.selected[type]=chosen.slice(0,Math.min(n,pool.length));
+  });
+}
+
+function buildMealPlan(){
+  const {protein,carb,veggie}=S.selected;
+  const combos=[];
+  for(let p=0;p<protein.length;p++)
+    for(let c=0;c<carb.length;c++)
+      for(let v=0;v<veggie.length;v++)
+        combos.push({protein:protein[p],carb:carb[c],veggie:veggie[v]});
+  const shuffled=shuffle(combos);
+  const plan=[];
+  const slots=totalMealSlots();
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  let slot=0;
+  for(let w=0;w<S.weeks;w++){
+    for(let d=0;d<7;d++){
+      for(const m of S.meals){
+        const combo=shuffled[slot%shuffled.length];
+        plan.push({week:w+1,day:days[d],meal:m,protein:combo.protein,carb:combo.carb,veggie:combo.veggie});
+        slot++;
+      }
+    }
+  }
+  S.mealPlan=plan;
+}
+
+function buildShoppingList(){
+  // Count appearances
+  const counts={protein:{},carb:{},veggie:{}};
+  for(const m of S.mealPlan){
+    counts.protein[m.protein.id]=(counts.protein[m.protein.id]||0)+1;
+    counts.carb[m.carb.id]=(counts.carb[m.carb.id]||0)+1;
+    counts.veggie[m.veggie.id]=(counts.veggie[m.veggie.id]||0)+1;
+  }
+  const ingMap=new Map();
+  function addRec(rec,cnt,typeKey){
+    const needed=cnt*totalPeople();
+    const scale=Math.ceil(needed/rec.servings);
+    for(const ing of rec.ingredients){
+      const key=ing.n.toLowerCase()+'|'+ing.u;
+      const scaledQ=ing.q*scale;
+      if(ingMap.has(key)){
+        ingMap.get(key).q+=scaledQ;
+      } else {
+        ingMap.set(key,{n:ing.n,q:scaledQ,u:ing.u,c:ing.c,p:ing.p});
+      }
+    }
+  }
+  for(const r of S.selected.protein) addRec(r,counts.protein[r.id]||0,'protein');
+  for(const r of S.selected.carb)    addRec(r,counts.carb[r.id]||0,'carb');
+  for(const r of S.selected.veggie)  addRec(r,counts.veggie[r.id]||0,'veggie');
+
+  const cats={meat:[],produce:[],dairy:[],pantry:[]};
+  let total=0;
+  for(const [key,ing] of ingMap){
+    const priceKey=key;
+    const unitCost=S.editedPrices[priceKey]!==undefined?S.editedPrices[priceKey]:ing.p;
+    const cost=ing.q*unitCost;
+    total+=cost;
+    cats[ing.c]=cats[ing.c]||[];
+    cats[ing.c].push({...ing,q:ing.q,p:unitCost,cost,key:priceKey});
+  }
+  for(const cat of Object.keys(cats)) cats[cat].sort((a,b)=>b.cost-a.cost);
+  S.shopping=cats;
+  S.totalCost=total;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER UTILITIES
+// ═══════════════════════════════════════════════════════════
+function setHtml(id,html){ document.getElementById(id).innerHTML=html }
+
+function renderNav(){
+  const steps=[
+    {n:1,label:'Setup'},
+    {n:2,label:'Recipes'},
+    {n:3,label:'Meal Plan'},
+    {n:4,label:'Shopping List'}
+  ];
+  setHtml('stepNav', steps.map(s=>{
+    const cls=s.n<S.step?'done':s.n===S.step?'active':'';
+    const icon=s.n<S.step?'✓':s.n;
+    return `<div class="step-btn ${cls}"><span class="num">${icon}</span>${s.label}</div>`;
+  }).join(''));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STEP 1 — SETUP
+// ═══════════════════════════════════════════════════════════
+function renderStep1(){
+  const mealOpts=[{v:'lunch',l:'Lunch'},{v:'dinner',l:'Dinner'}];
+  const dietOpts=[
+    {v:'gf',l:'Gluten-Free'},{v:'df',l:'Dairy-Free'},
+    {v:'veg',l:'Vegetarian'},{v:'vgn',l:'Vegan'}
+  ];
+  setHtml('root',`
+  <div class="card">
+    <div class="card-title"><span class="icon">👥</span>Household</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Adults</label>
+        <input type="number" id="adults" value="${S.adults}" min="1" max="12">
+      </div>
+      <div class="form-group">
+        <label>Kids (count as ½ serving)</label>
+        <input type="number" id="kids" value="${S.kids}" min="0" max="12">
+      </div>
+    </div>
+    <div class="section-label">Which meals?</div>
+    <div class="pill-group" id="mealPills">
+      ${mealOpts.map(m=>`<label class="pill ${S.meals.includes(m.v)?'on':''}"><input type="checkbox" value="${m.v}" ${S.meals.includes(m.v)?'checked':''}>${m.l}</label>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📅</span>Plan Duration</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Number of Weeks</label>
+        <div class="range-row">
+          <input type="range" id="weeksRange" min="1" max="4" value="${S.weeks}" oninput="document.getElementById('weeksVal').textContent=this.value;S.weeks=+this.value">
+          <span class="range-val" id="weeksVal">${S.weeks}</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Total Budget ($)</label>
+        <input type="number" id="budget" value="${S.budget}" min="20" step="10" placeholder="e.g. 200">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🥦</span>Dietary Restrictions</div>
+    <div class="pill-group" id="dietPills">
+      ${dietOpts.map(d=>`<label class="pill ${S.dietary.has(d.v)?'on':''}"><input type="checkbox" value="${d.v}" ${S.dietary.has(d.v)?'checked':''}>${d.l}</label>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🛒</span>Ingredient Preferences</div>
+    <div class="form-group" style="margin-bottom:.75rem">
+      <label>Must Include (press Enter to add)</label>
+      <div class="tag-wrap" id="incWrap" onclick="document.getElementById('incInput').focus()">
+        ${S.include.map(t=>`<span class="tag inc">${t}<button onclick="removeTag('include','${t}',event)">×</button></span>`).join('')}
+        <input class="tag-input" id="incInput" placeholder="e.g. chicken…" onkeydown="tagKeydown(event,'include')">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Exclude / Avoid (press Enter to add)</label>
+      <div class="tag-wrap" id="excWrap" onclick="document.getElementById('excInput').focus()">
+        ${S.exclude.map(t=>`<span class="tag exc">${t}<button onclick="removeTag('exclude','${t}',event)">×</button></span>`).join('')}
+        <input class="tag-input" id="excInput" placeholder="e.g. shellfish…" onkeydown="tagKeydown(event,'exclude')">
+      </div>
+    </div>
+  </div>
+
+  <details class="card">
+    <summary>AI Recipe Generation (optional — Claude API key)</summary>
+    <div class="detail-body">
+      <div class="alert alert-info">Your API key is stored only in your browser (localStorage) and never sent anywhere except directly to Anthropic's API.</div>
+      <div class="form-group">
+        <label>Claude API Key</label>
+        <input type="password" id="apiKey" value="${S.apiKey}" placeholder="sk-ant-…">
+      </div>
+    </div>
+  </details>
+
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="goStep2()">Generate My Plan →</button>
+  </div>
+  `);
+
+  // Pill event listeners
+  document.querySelectorAll('#mealPills .pill input').forEach(cb=>{
+    cb.addEventListener('change',function(){
+      S.meals=Array.from(document.querySelectorAll('#mealPills input:checked')).map(c=>c.value);
+      this.closest('.pill').classList.toggle('on',this.checked);
+    });
+  });
+  document.querySelectorAll('#dietPills .pill input').forEach(cb=>{
+    cb.addEventListener('change',function(){
+      if(this.checked) S.dietary.add(this.value); else S.dietary.delete(this.value);
+      this.closest('.pill').classList.toggle('on',this.checked);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STEP 2 — RECIPE SELECTION
+// ═══════════════════════════════════════════════════════════
+function recipeCard(rec,type,idx){
+  const tags=rec.tags.map(t=>`<span class="rtag ${t}">${t==='gf'?'GF':t==='df'?'DF':t==='veg'?'Veg':t==='vgn'?'Vegan':t}</span>`).join('');
+  return `<div class="rec-card sel" id="rcard-${type}-${idx}">
+    <span class="sel-badge">✓</span>
+    <h4>${rec.name}</h4>
+    <div class="rec-meta"><span>⏱ ${fmtTime(rec.prep+rec.cook)}</span><span>🍽 ${rec.servings} srv</span></div>
+    <div class="rec-tags">${tags}</div>
+    <button class="btn btn-ghost btn-sm swap-btn" onclick="swapRecipe('${type}',${idx},event)">Swap ↺</button>
+  </div>`;
+}
+
+function renderStep2(){
+  const types=['protein','carb','veggie'];
+  const labels={protein:'🥩 Proteins',carb:'🍚 Carb Sides',veggie:'🥦 Veggie Sides'};
+  const totalCombos=S.selected.protein.length*S.selected.carb.length*S.selected.veggie.length;
+  setHtml('root',`
+  <div class="alert alert-ok">
+    <strong>${totalCombos} unique meal combinations</strong> generated for ${S.weeks} week${S.weeks>1?'s':''}
+    (${totalMealSlots()} total meals for ${totalPeople()} people). Click any recipe to see details, or hit Swap to change it.
+  </div>
+  ${types.map(type=>`
+  <div class="card">
+    <div class="card-title">${labels[type]}</div>
+    <div class="rec-grid" id="grid-${type}">
+      ${S.selected[type].map((r,i)=>recipeCard(r,type,i)).join('')}
+    </div>
+  </div>
+  `).join('')}
+  ${S.apiKey?`
+  <div class="card">
+    <div class="card-title"><span class="icon">✨</span>AI Recipe Generator</div>
+    <div class="alert alert-info">Ask Claude to generate a custom recipe. It will be added to the appropriate category.</div>
+    <div class="form-row">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Describe the recipe you want</label>
+        <input type="text" id="aiPrompt" placeholder="e.g. spicy Korean beef bowl, dairy-free pasta, easy sheet pan salmon…">
+      </div>
+    </div>
+    <div class="btn-group" style="margin-top:.75rem">
+      <button class="btn btn-accent" onclick="generateAiRecipe()">✨ Generate with Claude</button>
+    </div>
+    <div id="aiResult"></div>
+  </div>
+  `:''}
+  <div class="btn-group">
+    <button class="btn btn-ghost" onclick="goStep1()">← Back</button>
+    <button class="btn btn-primary" onclick="goStep3()">Build Meal Plan →</button>
+  </div>
+  `);
+
+  // Click recipe cards to view details
+  document.querySelectorAll('.rec-card').forEach((card,i)=>{
+    card.addEventListener('click',function(e){
+      if(e.target.closest('.swap-btn')) return;
+      const [,type,idx]=this.id.split('-');
+      showRecipeModal(S.selected[type][+idx]);
+    });
+  });
+}
+
+let swapPool={protein:[],carb:[],veggie:[]};
+function swapRecipe(type,idx,e){
+  e.stopPropagation();
+  if(!swapPool[type].length){
+    const all=filterRecipes(type);
+    swapPool[type]=shuffle(all.filter(r=>!S.selected[type].some(s=>s.id===r.id)));
+  }
+  if(!swapPool[type].length){alert('No more recipes match your current filters.');return;}
+  S.selected[type][idx]=swapPool[type].pop();
+  renderStep2();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STEP 3 — MEAL PLAN
+// ═══════════════════════════════════════════════════════════
+function renderStep3(){
+  const byWeek={};
+  for(const m of S.mealPlan){
+    byWeek[m.week]=byWeek[m.week]||[];
+    byWeek[m.week].push(m);
+  }
+  const combos=S.selected.protein.length*S.selected.carb.length*S.selected.veggie.length;
+  const dayAbbr={Sunday:'Sun',Monday:'Mon',Tuesday:'Tue',Wednesday:'Wed',Thursday:'Thu',Friday:'Fri',Saturday:'Sat'};
+
+  setHtml('root',`
+  <div class="stats-row">
+    <div class="stat"><div class="stat-val">${totalMealSlots()}</div><div class="stat-lbl">Total Meals</div></div>
+    <div class="stat"><div class="stat-val">${combos}</div><div class="stat-lbl">Unique Combos</div></div>
+    <div class="stat"><div class="stat-val">${totalPeople()}</div><div class="stat-lbl">People Served</div></div>
+    <div class="stat"><div class="stat-val">${S.weeks}</div><div class="stat-lbl">Weeks</div></div>
+  </div>
+
+  <div class="card">
+    <div class="plan-legend">
+      <div class="leg"><div class="leg-dot" style="background:#fde8d8"></div>Protein</div>
+      <div class="leg"><div class="leg-dot" style="background:#fef9c3"></div>Carb Side</div>
+      <div class="leg"><div class="leg-dot" style="background:#d1fae5"></div>Veggie Side</div>
+      <span style="color:var(--muted);font-size:.75rem">Click any component to see the full recipe</span>
+    </div>
+    ${Object.keys(byWeek).map(w=>`
+    <div class="week-block">
+      <div class="week-header">Week ${w}</div>
+      ${byWeek[w].map(m=>`
+      <div class="meal-row">
+        <div class="day-lbl">${dayAbbr[m.day]||m.day}</div>
+        <div class="meal-type">${m.meal}</div>
+        <div class="mc p" onclick="showRecipeModal(${JSON.stringify(m.protein).replace(/"/g,'&quot;')})">${m.protein.name}</div>
+        <div class="mc c" onclick="showRecipeModal(${JSON.stringify(m.carb).replace(/"/g,'&quot;')})">${m.carb.name}</div>
+        <div class="mc v" onclick="showRecipeModal(${JSON.stringify(m.veggie).replace(/"/g,'&quot;')})">${m.veggie.name}</div>
+      </div>`).join('')}
+    </div>`).join('')}
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-ghost" onclick="goStep2()">← Back</button>
+    <button class="btn btn-primary" onclick="goStep4()">Build Shopping List →</button>
+  </div>
+  `);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STEP 4 — SHOPPING LIST
+// ═══════════════════════════════════════════════════════════
+const CAT_META={
+  meat:{icon:'🥩',label:'Meat & Seafood'},
+  produce:{icon:'🥦',label:'Produce'},
+  dairy:{icon:'🥛',label:'Dairy & Eggs'},
+  pantry:{icon:'🫙',label:'Pantry & Staples'}
+};
+
+function renderStep4(){
+  const over=S.totalCost>S.budget;
+  const pct=Math.min((S.totalCost/S.budget)*100,100);
+  setHtml('root',`
+  <div class="stats-row">
+    <div class="stat"><div class="stat-val">$${S.totalCost.toFixed(2)}</div><div class="stat-lbl">Est. Total Cost</div></div>
+    <div class="stat"><div class="stat-val">$${(S.totalCost/S.weeks).toFixed(2)}</div><div class="stat-lbl">Per Week</div></div>
+    <div class="stat"><div class="stat-val">$${(S.totalCost/totalMealSlots()).toFixed(2)}</div><div class="stat-lbl">Per Meal</div></div>
+    <div class="stat"><div class="stat-val">$${(S.totalCost/(totalMealSlots()*totalPeople())).toFixed(2)}</div><div class="stat-lbl">Per Serving</div></div>
+  </div>
+
+  ${over?`<div class="alert alert-warn">⚠️ Estimated cost ($${S.totalCost.toFixed(2)}) exceeds your budget ($${S.budget.toFixed(2)}). Consider swapping pricier recipes or reducing weeks.</div>`:`<div class="alert alert-ok">✅ On budget! $${(S.budget-S.totalCost).toFixed(2)} to spare.</div>`}
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+      <div class="card-title" style="margin:0"><span class="icon">🛒</span>Shopping List</div>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Print</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyList()">📋 Copy</button>
+      </div>
+    </div>
+    <div class="alert alert-info" style="font-size:.8rem">💡 Prices are estimates. Click any price to edit it — totals update automatically.</div>
+    ${Object.keys(CAT_META).filter(c=>S.shopping[c]?.length).map(c=>`
+    <div class="shop-cat">
+      <div class="shop-cat-title">${CAT_META[c].icon} ${CAT_META[c].label}</div>
+      ${S.shopping[c].map(item=>`
+      <div class="shop-item">
+        <div class="shop-item-name">${item.n}</div>
+        <div class="shop-item-qty">${fmtQty(item.q)} ${item.u}</div>
+        <input class="price-inp" type="number" step="0.01" min="0"
+          value="${item.cost.toFixed(2)}"
+          title="Edit estimated cost"
+          onchange="updatePrice('${item.key}',${item.q},this)"
+          onclick="this.select()">
+      </div>`).join('')}
+    </div>`).join('')}
+
+    <div class="total-bar">
+      <div>
+        <div style="font-size:.85rem;opacity:.75">Estimated Total</div>
+        <div class="t-num" id="totalDisplay">$${S.totalCost.toFixed(2)}</div>
+        <div class="t-sub">Budget: $${S.budget.toFixed(2)} · ${S.weeks} week${S.weeks>1?'s':''}</div>
+        <div class="budget-bar"><div class="budget-fill ${over?'over':''}" id="budgetFill" style="width:${pct}%"></div></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:.8rem;opacity:.75">Serves</div>
+        <div style="font-size:1.3rem;font-weight:800">${totalPeople()} people</div>
+        <div style="font-size:.8rem;opacity:.75">${totalMealSlots()} meals total</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-ghost" onclick="goStep3()">← Back</button>
+    <button class="btn btn-outline" onclick="S.step=1;S.selected={protein:[],carb:[],veggie:[]};S.mealPlan=[];S.shopping={};S.editedPrices={};render()">Start Over</button>
+  </div>
+  `);
+}
+
+function updatePrice(key,qty,input){
+  const newTotal=parseFloat(input.value)||0;
+  const newPPU=qty>0?newTotal/qty:0;
+  S.editedPrices[key]=newPPU;
+  // recompute total
+  let total=0;
+  for(const cat of Object.values(S.shopping))
+    for(const item of cat||[]){
+      const ppu=S.editedPrices[item.key]!==undefined?S.editedPrices[item.key]:item.p;
+      total+=item.q*ppu;
+    }
+  S.totalCost=total;
+  document.getElementById('totalDisplay').textContent='$'+total.toFixed(2);
+  const pct=Math.min((total/S.budget)*100,100);
+  const fill=document.getElementById('budgetFill');
+  fill.style.width=pct+'%';
+  fill.className='budget-fill'+(total>S.budget?' over':'');
+}
+
+function copyList(){
+  const lines=['SHOPPING LIST','='.repeat(30)];
+  for(const [cat,meta] of Object.entries(CAT_META)){
+    if(!S.shopping[cat]?.length) continue;
+    lines.push('','['+meta.label+']');
+    for(const i of S.shopping[cat])
+      lines.push(`  ${i.n} — ${fmtQty(i.q)} ${i.u}  (~$${i.cost.toFixed(2)})`);
+  }
+  lines.push('','TOTAL: $'+S.totalCost.toFixed(2));
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('Shopping list copied to clipboard!'));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RECIPE MODAL
+// ═══════════════════════════════════════════════════════════
+function showRecipeModal(rec){
+  // Find the scale factor based on current selections and total servings needed
+  let scale=1;
+  const ppl=totalPeople();
+  const totalSlots=totalMealSlots();
+  const type=DB.proteins.find(r=>r.id===rec.id)?'protein':DB.carbSides.find(r=>r.id===rec.id)?'carb':'veggie';
+  const count=S.mealPlan.filter(m=>m[type].id===rec.id).length;
+  if(count>0) scale=Math.ceil(count*ppl/rec.servings);
+  if(scale<1)scale=1;
+
+  const ings=rec.ingredients.map(i=>{
+    const sq=i.q*scale;
+    return `<li><span>${i.n}</span><span class="ing-qty">${fmtQty(sq)} ${i.u}</span></li>`;
+  }).join('');
+
+  const tags=rec.tags.map(t=>`<span class="rtag ${t}">${t==='gf'?'Gluten-Free':t==='df'?'Dairy-Free':t==='veg'?'Vegetarian':t==='vgn'?'Vegan':t}</span>`).join(' ');
+
+  document.getElementById('modalRoot').innerHTML=`
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <h2>${rec.name}</h2>
+      <div class="modal-meta">
+        <span>⏱ Prep: ${fmtTime(rec.prep)}</span>
+        <span>🔥 Cook: ${fmtTime(rec.cook)}</span>
+        <span>🍽 Base: ${rec.servings} srv</span>
+        ${scale>1?`<span>📈 Scaled ×${scale} for your plan</span>`:''}
+      </div>
+      <div style="margin-bottom:.75rem">${tags}</div>
+      <h3>Ingredients ${scale>1?`<span style="font-size:.8rem;color:var(--muted)">(scaled for ${Math.round(count*ppl)} servings)</span>`:''}</h3>
+      <ul class="ing-list">${ings}</ul>
+      <h3>Instructions</h3>
+      <ol class="step-list">${rec.steps.map(s=>`<li>${s}</li>`).join('')}</ol>
+    </div>
+  </div>`;
+}
+
+function closeModal(){
+  document.getElementById('modalRoot').innerHTML='';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AI RECIPE GENERATION
+// ═══════════════════════════════════════════════════════════
+async function generateAiRecipe(){
+  const prompt=document.getElementById('aiPrompt').value.trim();
+  if(!prompt){alert('Please describe the recipe you want.');return;}
+  const div=document.getElementById('aiResult');
+  div.innerHTML='<div class="alert alert-info">✨ Asking Claude…</div>';
+  const systemPrompt=`You generate meal prep recipes as JSON. Return ONLY valid JSON with this structure:
+{"id":"unique-kebab-id","name":"Recipe Name","type":"protein|carb|veggie","tags":["gf","df","veg","vgn"],"prep":10,"cook":30,"servings":6,"ingredients":[{"n":"ingredient name","q":1.5,"u":"lbs","c":"meat|produce|dairy|pantry","p":4.99}],"steps":["Step 1...","Step 2..."]}
+tags: gf=gluten-free,df=dairy-free,veg=vegetarian,vgn=vegan (only include if true).
+p = realistic price per unit in USD. servings = base recipe yield.
+Steps should be detailed and meal-prep friendly. Return ONLY JSON, no markdown.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1024,system:systemPrompt,messages:[{role:'user',content:`Generate a meal prep recipe for: ${prompt}. Dietary restrictions to respect: ${[...S.dietary].join(', ')||'none'}. Exclude: ${S.exclude.join(', ')||'nothing'}.`}]})
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||res.statusText);}
+    const data=await res.json();
+    const text=data.content[0].text.trim();
+    const rec=JSON.parse(text);
+    // Validate and add
+    if(!rec.id||!rec.name||!rec.type) throw new Error('Invalid recipe structure returned');
+    rec.id='ai-'+rec.id+'-'+Date.now();
+    const typeKey=rec.type==='protein'?'protein':rec.type==='carb'?'carb':'veggie';
+    S.selected[typeKey].push(rec);
+    DB[typeKey+'s'].push(rec);
+    div.innerHTML=`<div class="alert alert-ok">✅ Added "${rec.name}" to your ${typeKey} options!</div>`;
+    setTimeout(renderStep2,1500);
+  } catch(err){
+    div.innerHTML=`<div class="alert alert-warn">❌ Error: ${err.message}</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function goStep1(){S.step=1;render();}
+function goStep2(){
+  // Read setup values
+  S.adults=+document.getElementById('adults').value||1;
+  S.kids=+document.getElementById('kids').value||0;
+  S.budget=+document.getElementById('budget').value||150;
+  const k=document.getElementById('apiKey');
+  if(k){S.apiKey=k.value.trim();localStorage.setItem('mpp_key',S.apiKey);}
+  if(!S.meals.length){alert('Please select at least one meal (Lunch or Dinner).');return;}
+  autoSelect();
+  swapPool={protein:[],carb:[],veggie:[]};
+  S.step=2;render();
+}
+function goStep3(){
+  buildMealPlan();
+  S.step=3;render();
+}
+function goStep4(){
+  buildShoppingList();
+  S.step=4;render();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TAG INPUT
+// ═══════════════════════════════════════════════════════════
+function tagKeydown(e,list){
+  if(e.key==='Enter'||e.key===','){
+    e.preventDefault();
+    const val=e.target.value.trim().replace(/,$/,'');
+    if(!val) return;
+    if(list==='include'&&!S.include.includes(val)) S.include.push(val);
+    if(list==='exclude'&&!S.exclude.includes(val)) S.exclude.push(val);
+    renderStep1();
+    // refocus
+    setTimeout(()=>{
+      const inp=document.getElementById(list==='include'?'incInput':'excInput');
+      if(inp) inp.focus();
+    },10);
+  }
+}
+function removeTag(list,val,e){
+  e.stopPropagation();
+  if(list==='include') S.include=S.include.filter(t=>t!==val);
+  else S.exclude=S.exclude.filter(t=>t!==val);
+  renderStep1();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MAIN RENDER
+// ═══════════════════════════════════════════════════════════
+function render(){
+  renderNav();
+  if(S.step===1) renderStep1();
+  else if(S.step===2) renderStep2();
+  else if(S.step===3) renderStep3();
+  else if(S.step===4) renderStep4();
+}
+
+render();
+</script>
+</body>
+</html>
