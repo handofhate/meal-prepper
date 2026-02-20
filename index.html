@@ -395,7 +395,7 @@ proteins: [
 }
 ], // end proteins
 
-carbSides: [
+carbs: [
 {
   id:'white-rice', name:'Fluffy White Rice',
   tags:['gf','df','veg','vgn'], prep:5, cook:20, servings:6,
@@ -519,9 +519,9 @@ carbSides: [
     'Quinoa is high protein and holds up very well for meal prep. Refrigerates 5–6 days.'
   ]
 }
-], // end carbSides
+], // end carbs
 
-veggieSides: [
+veggies: [
 {
   id:'roasted-broccoli', name:'Roasted Garlic Broccoli',
   tags:['gf','df','veg','vgn'], prep:10, cook:22, servings:6,
@@ -1152,7 +1152,7 @@ function showRecipeModal(rec){
   let scale=1;
   const ppl=totalPeople();
   const totalSlots=totalMealSlots();
-  const type=DB.proteins.find(r=>r.id===rec.id)?'protein':DB.carbSides.find(r=>r.id===rec.id)?'carb':'veggie';
+  const type=DB.proteins.find(r=>r.id===rec.id)?'protein':DB.carbs.find(r=>r.id===rec.id)?'carb':'veggie';
   const count=S.mealPlan.filter(m=>m[type].id===rec.id).length;
   if(count>0) scale=Math.ceil(count*ppl/rec.servings);
   if(scale<1)scale=1;
