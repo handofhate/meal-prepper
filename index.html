@@ -97,21 +97,13 @@ input[type=range]{width:100%;accent-color:var(--green)}
 .sel-badge{position:absolute;top:.5rem;right:.5rem;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800}
 .swap-btn{position:absolute;bottom:.5rem;right:.5rem;font-size:.7rem;padding:.2rem .5rem}
 
-/* MEAL PLAN TABLE */
-.week-block{margin-bottom:2rem}
-.week-header{font-size:.95rem;font-weight:800;color:var(--green-d);padding:.6rem .75rem;background:#ecfdf5;border-radius:8px;margin-bottom:.75rem;border-left:4px solid var(--green)}
-.meal-row{display:grid;grid-template-columns:90px 80px 1fr 1fr 1fr;gap:.5rem;align-items:center;padding:.45rem .5rem;border-radius:6px}
-.meal-row:nth-child(even){background:#fafafa}
-.day-lbl{font-size:.75rem;font-weight:700;color:var(--muted)}
-.meal-type{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af}
-.mc{font-size:.8rem;padding:.3rem .6rem;border-radius:6px;font-weight:600;cursor:pointer}
-.mc:hover{opacity:.85}
-.mc.p{background:#fde8d8;color:#9a3412}
-.mc.c{background:#fef9c3;color:#713f12}
-.mc.v{background:#d1fae5;color:#065f46}
-.plan-legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.78rem;margin-bottom:1rem}
-.leg{display:flex;align-items:center;gap:.35rem}
-.leg-dot{width:10px;height:10px;border-radius:3px}
+/* BATCH COOK LIST */
+.batch-list{display:flex;flex-direction:column;gap:.5rem}
+.batch-row{padding:.75rem 1rem;border-radius:8px;border:1.5px solid var(--border);transition:.15s}
+.batch-row:hover{border-color:var(--green-l);background:#f0fdf4}
+.batch-name{font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:.3rem}
+.batch-meta{display:flex;gap:1rem;font-size:.8rem;color:var(--muted);flex-wrap:wrap;align-items:center}
+.batch-badge{background:var(--green);color:#fff;padding:.15rem .55rem;border-radius:99px;font-size:.75rem;font-weight:700}
 
 /* SHOPPING LIST */
 .shop-cat{margin-bottom:1.25rem}
@@ -173,8 +165,7 @@ details .detail-body{margin-top:.75rem}
   header{padding:1rem}
   header h1{font-size:1.2rem}
   .step-btn{font-size:.65rem;padding:.75rem .25rem}
-  .meal-row{grid-template-columns:60px 55px 1fr 1fr;font-size:.75rem}
-  .meal-row .mc.v{grid-column:3/span 2}
+  .batch-meta{gap:.5rem}
 }
 @media print{
   header,.step-nav,.btn-group,#step1,#step2,#step3{display:none!important}
@@ -707,10 +698,8 @@ function filterRecipes(type){
   });
 }
 function countNeeded(){
-  const slots=totalMealSlots();
-  if(S.weeks<=2) return 3;
-  if(S.weeks<=3) return 4;
-  return 5;
+  // ~2 recipes per 7 meal slots so variety stays high
+  return Math.max(2, Math.ceil(totalMealSlots() * 2 / 7));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -761,40 +750,29 @@ function buildMealPlan(){
 }
 
 function buildShoppingList(){
-  // Count appearances
-  const counts={protein:{},carb:{},veggie:{}};
-  for(const m of S.mealPlan){
-    counts.protein[m.protein.id]=(counts.protein[m.protein.id]||0)+1;
-    counts.carb[m.carb.id]=(counts.carb[m.carb.id]||0)+1;
-    counts.veggie[m.veggie.id]=(counts.veggie[m.veggie.id]||0)+1;
-  }
   const ingMap=new Map();
-  function addRec(rec,cnt,typeKey){
-    const needed=cnt*totalPeople();
-    const scale=Math.ceil(needed/rec.servings);
-    for(const ing of rec.ingredients){
-      const key=ing.n.toLowerCase()+'|'+ing.u;
-      const scaledQ=ing.q*scale;
-      if(ingMap.has(key)){
-        ingMap.get(key).q+=scaledQ;
-      } else {
-        ingMap.set(key,{n:ing.n,q:scaledQ,u:ing.u,c:ing.c,p:ing.p});
+  ['protein','carb','veggie'].forEach(type=>{
+    S.selected[type].forEach(rec=>{
+      const b=batchCount(rec,type);
+      for(const ing of rec.ingredients){
+        const key=ing.n.toLowerCase()+'|'+ing.u;
+        const scaledQ=ing.q*b;
+        if(ingMap.has(key)){
+          ingMap.get(key).q+=scaledQ;
+        } else {
+          ingMap.set(key,{n:ing.n,q:scaledQ,u:ing.u,c:ing.c,p:ing.p});
+        }
       }
-    }
-  }
-  for(const r of S.selected.protein) addRec(r,counts.protein[r.id]||0,'protein');
-  for(const r of S.selected.carb)    addRec(r,counts.carb[r.id]||0,'carb');
-  for(const r of S.selected.veggie)  addRec(r,counts.veggie[r.id]||0,'veggie');
-
+    });
+  });
   const cats={meat:[],produce:[],dairy:[],pantry:[]};
   let total=0;
   for(const [key,ing] of ingMap){
-    const priceKey=key;
-    const unitCost=S.editedPrices[priceKey]!==undefined?S.editedPrices[priceKey]:ing.p;
+    const unitCost=S.editedPrices[key]!==undefined?S.editedPrices[key]:ing.p;
     const cost=ing.q*unitCost;
     total+=cost;
     cats[ing.c]=cats[ing.c]||[];
-    cats[ing.c].push({...ing,q:ing.q,p:unitCost,cost,key:priceKey});
+    cats[ing.c].push({...ing,p:unitCost,cost,key});
   }
   for(const cat of Object.keys(cats)) cats[cat].sort((a,b)=>b.cost-a.cost);
   S.shopping=cats;
@@ -999,49 +977,82 @@ function swapRecipe(type,idx,e){
 // ═══════════════════════════════════════════════════════════
 //  STEP 3 — MEAL PLAN
 // ═══════════════════════════════════════════════════════════
+function batchCount(rec, type){
+  const slots=totalMealSlots();
+  const ppl=totalPeople();
+  const nInType=S.selected[type].length||1;
+  const slotsForRec=slots/nInType;
+  return Math.max(1,Math.ceil(slotsForRec*ppl/rec.servings));
+}
+
 function renderStep3(){
-  const byWeek={};
-  for(const m of S.mealPlan){
-    byWeek[m.week]=byWeek[m.week]||[];
-    byWeek[m.week].push(m);
-  }
+  const slots=totalMealSlots();
+  const ppl=totalPeople();
   const combos=S.selected.protein.length*S.selected.carb.length*S.selected.veggie.length;
-  const dayAbbr={Sunday:'Sun',Monday:'Mon',Tuesday:'Tue',Wednesday:'Wed',Thursday:'Thu',Friday:'Fri',Saturday:'Sat'};
+  const types=[
+    {key:'protein',icon:'🥩',label:'Proteins'},
+    {key:'carb',icon:'🍚',label:'Carb Sides'},
+    {key:'veggie',icon:'🥦',label:'Veggie Sides'}
+  ];
+  // total cook time estimate
+  let totalCookMin=0;
+  ['protein','carb','veggie'].forEach(t=>{
+    S.selected[t].forEach(r=>{
+      const b=batchCount(r,t);
+      totalCookMin+=r.prep+(r.cook*b);
+    });
+  });
+  const totalServings=Math.round(slots*ppl);
 
   setHtml('root',`
-  <div class="stats-row">
-    <div class="stat"><div class="stat-val">${totalMealSlots()}</div><div class="stat-lbl">Total Meals</div></div>
-    <div class="stat"><div class="stat-val">${combos}</div><div class="stat-lbl">Unique Combos</div></div>
-    <div class="stat"><div class="stat-val">${totalPeople()}</div><div class="stat-lbl">People Served</div></div>
-    <div class="stat"><div class="stat-val">${S.weeks}</div><div class="stat-lbl">Weeks</div></div>
+  <div class="alert alert-ok">
+    <strong>Cook once, eat well for ${S.weeks} week${S.weeks>1?'s':''}.</strong>
+    Batch-cook the recipes below this Sunday. You'll end up with ${totalServings} servings across
+    ${S.selected.protein.length+S.selected.carb.length+S.selected.veggie.length} recipes —
+    mix and match however you like each day.
   </div>
 
-  <div class="card">
-    <div class="plan-legend">
-      <div class="leg"><div class="leg-dot" style="background:#fde8d8"></div>Protein</div>
-      <div class="leg"><div class="leg-dot" style="background:#fef9c3"></div>Carb Side</div>
-      <div class="leg"><div class="leg-dot" style="background:#d1fae5"></div>Veggie Side</div>
-      <span style="color:var(--muted);font-size:.75rem">Click any component to see the full recipe</span>
-    </div>
-    ${Object.keys(byWeek).map(w=>`
-    <div class="week-block">
-      <div class="week-header">Week ${w}</div>
-      ${byWeek[w].map(m=>`
-      <div class="meal-row">
-        <div class="day-lbl">${dayAbbr[m.day]||m.day}</div>
-        <div class="meal-type">${m.meal}</div>
-        <div class="mc p" onclick="showRecipeModal(${JSON.stringify(m.protein).replace(/"/g,'&quot;')})">${m.protein.name}</div>
-        <div class="mc c" onclick="showRecipeModal(${JSON.stringify(m.carb).replace(/"/g,'&quot;')})">${m.carb.name}</div>
-        <div class="mc v" onclick="showRecipeModal(${JSON.stringify(m.veggie).replace(/"/g,'&quot;')})">${m.veggie.name}</div>
-      </div>`).join('')}
-    </div>`).join('')}
+  <div class="stats-row">
+    <div class="stat"><div class="stat-val">${slots}</div><div class="stat-lbl">Meal Slots</div></div>
+    <div class="stat"><div class="stat-val">${combos}</div><div class="stat-lbl">Possible Combos</div></div>
+    <div class="stat"><div class="stat-val">${ppl}</div><div class="stat-lbl">People</div></div>
+    <div class="stat"><div class="stat-val">~${Math.round(totalCookMin/60)}h</div><div class="stat-lbl">Total Cook Time</div></div>
   </div>
+
+  ${types.map(({key,icon,label})=>`
+  <div class="card">
+    <div class="card-title">${icon} ${label}</div>
+    <div class="batch-list">
+      ${S.selected[key].map((rec,i)=>{
+        const b=batchCount(rec,key);
+        const servs=b*rec.servings;
+        const tags=rec.tags.map(t=>`<span class="rtag ${t}">${t==='gf'?'GF':t==='df'?'DF':t==='veg'?'Veg':t==='vgn'?'Vegan':t}</span>`).join('');
+        return `<div class="batch-row" data-type="${key}" data-idx="${i}" style="cursor:pointer">
+          <div class="batch-name">${rec.name}${tags?'&ensp;'+tags:''}</div>
+          <div class="batch-meta">
+            <span>⏱ ${fmtTime(rec.prep+rec.cook)}/batch</span>
+            <span class="batch-badge">${b} batch${b>1?'es':''} → ${servs} servings</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+  `).join('')}
 
   <div class="btn-group">
-    <button class="btn btn-ghost" onclick="goStep2()">← Back</button>
+    <button class="btn btn-ghost" onclick="backToStep2()">← Back</button>
     <button class="btn btn-primary" onclick="goStep4()">Build Shopping List →</button>
   </div>
   `);
+
+  // click batch rows to show recipe modal
+  document.querySelectorAll('.batch-row').forEach(row=>{
+    row.addEventListener('click',function(){
+      const type=this.dataset.type;
+      const idx=+this.dataset.idx;
+      showRecipeModal(S.selected[type][idx]);
+    });
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1148,14 +1159,8 @@ function copyList(){
 //  RECIPE MODAL
 // ═══════════════════════════════════════════════════════════
 function showRecipeModal(rec){
-  // Find the scale factor based on current selections and total servings needed
-  let scale=1;
-  const ppl=totalPeople();
-  const totalSlots=totalMealSlots();
   const type=DB.proteins.find(r=>r.id===rec.id)?'protein':DB.carbs.find(r=>r.id===rec.id)?'carb':'veggie';
-  const count=S.mealPlan.filter(m=>m[type].id===rec.id).length;
-  if(count>0) scale=Math.ceil(count*ppl/rec.servings);
-  if(scale<1)scale=1;
+  const scale=batchCount(rec,type);
 
   const ings=rec.ingredients.map(i=>{
     const sq=i.q*scale;
@@ -1205,7 +1210,7 @@ Steps should be detailed and meal-prep friendly. Return ONLY JSON, no markdown.`
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'content-type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01'},
+      headers:{'content-type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1024,system:systemPrompt,messages:[{role:'user',content:`Generate a meal prep recipe for: ${prompt}. Dietary restrictions to respect: ${[...S.dietary].join(', ')||'none'}. Exclude: ${S.exclude.join(', ')||'nothing'}.`}]})
     });
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||res.statusText);}
@@ -1229,6 +1234,7 @@ Steps should be detailed and meal-prep friendly. Return ONLY JSON, no markdown.`
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
 function goStep1(){S.step=1;render();}
+function backToStep2(){S.step=2;render();}
 function goStep2(){
   // Read setup values
   S.adults=+document.getElementById('adults').value||1;
@@ -1241,10 +1247,7 @@ function goStep2(){
   swapPool={protein:[],carb:[],veggie:[]};
   S.step=2;render();
 }
-function goStep3(){
-  buildMealPlan();
-  S.step=3;render();
-}
+function goStep3(){S.step=3;render();}
 function goStep4(){
   buildShoppingList();
   S.step=4;render();
