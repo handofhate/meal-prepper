@@ -105,6 +105,14 @@ input[type=range]{width:100%;accent-color:var(--green)}
 .batch-meta{display:flex;gap:1rem;font-size:.8rem;color:var(--muted);flex-wrap:wrap;align-items:center}
 .batch-badge{background:var(--green);color:#fff;padding:.15rem .55rem;border-radius:99px;font-size:.75rem;font-weight:700}
 
+/* THEMEALDB SEARCH RESULTS */
+.mdb-result{display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;border:1.5px solid var(--border);border-radius:8px;background:var(--surface)}
+.mdb-thumb{width:52px;height:52px;border-radius:6px;object-fit:cover;flex-shrink:0}
+.mdb-info{flex:1;min-width:0}
+.mdb-name{font-size:.9rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mdb-cat{font-size:.75rem;color:var(--muted)}
+.mdb-type-sel{font-size:.75rem;padding:.25rem .4rem;border:1.5px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)}
+
 /* SHOPPING LIST */
 .shop-cat{margin-bottom:1.25rem}
 .shop-cat-title{font-size:.875rem;font-weight:800;padding:.5rem .75rem;background:#f0fdf4;border-radius:8px;margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem;color:var(--green-d)}
@@ -660,7 +668,6 @@ const S = {
   include: [],
   exclude: [],
   varietyLevel: 3,
-  apiKey: localStorage.getItem('mpp_key')||'',
   selected: { protein:[], carb:[], veggie:[] },
   mealPlan: [],
   shopping: {},
@@ -880,17 +887,6 @@ function renderStep1(){
     </div>
   </div>
 
-  <details class="card">
-    <summary>AI Recipe Generation (optional — Claude API key)</summary>
-    <div class="detail-body">
-      <div class="alert alert-info">Your API key is stored only in your browser (localStorage) and never sent anywhere except directly to Anthropic's API.</div>
-      <div class="form-group">
-        <label>Claude API Key</label>
-        <input type="password" id="apiKey" value="${S.apiKey}" placeholder="sk-ant-…">
-      </div>
-    </div>
-  </details>
-
   <div class="btn-group">
     <button class="btn btn-primary" onclick="goStep2()">Generate My Plan →</button>
   </div>
@@ -942,22 +938,19 @@ function renderStep2(){
     </div>
   </div>
   `).join('')}
-  ${S.apiKey?`
   <div class="card">
-    <div class="card-title"><span class="icon">✨</span>AI Recipe Generator</div>
-    <div class="alert alert-info">Ask Claude to generate a custom recipe. It will be added to the appropriate category.</div>
-    <div class="form-row">
+    <div class="card-title"><span class="icon">🔍</span>Find More Recipes <span style="font-size:.75rem;font-weight:400;color:var(--muted)">via TheMealDB</span></div>
+    <div class="form-row" style="align-items:flex-end">
       <div class="form-group" style="grid-column:1/-1">
-        <label>Describe the recipe you want</label>
-        <input type="text" id="aiPrompt" placeholder="e.g. spicy Korean beef bowl, dairy-free pasta, easy sheet pan salmon…">
+        <label>Search by name or ingredient (e.g. "chicken", "salmon", "pasta")</label>
+        <div style="display:flex;gap:.5rem">
+          <input type="text" id="mdbSearch" placeholder="e.g. teriyaki chicken…" onkeydown="if(event.key==='Enter')searchMealDB()" style="flex:1">
+          <button class="btn btn-ghost" onclick="searchMealDB()">Search</button>
+        </div>
       </div>
     </div>
-    <div class="btn-group" style="margin-top:.75rem">
-      <button class="btn btn-accent" onclick="generateAiRecipe()">✨ Generate with Claude</button>
-    </div>
-    <div id="aiResult"></div>
+    <div id="mdbResults"></div>
   </div>
-  `:''}
   <div class="btn-group">
     <button class="btn btn-ghost" onclick="goStep1()">← Back</button>
     <button class="btn btn-primary" onclick="goStep3()">Build Meal Plan →</button>
@@ -1206,40 +1199,159 @@ function closeModal(){
 }
 
 // ═══════════════════════════════════════════════════════════
-//  AI RECIPE GENERATION
+//  THEMEALDB INTEGRATION
 // ═══════════════════════════════════════════════════════════
-async function generateAiRecipe(){
-  const prompt=document.getElementById('aiPrompt').value.trim();
-  if(!prompt){alert('Please describe the recipe you want.');return;}
-  const div=document.getElementById('aiResult');
-  div.innerHTML='<div class="alert alert-info">✨ Asking Claude…</div>';
-  const systemPrompt=`You generate meal prep recipes as JSON. Return ONLY valid JSON with this structure:
-{"id":"unique-kebab-id","name":"Recipe Name","type":"protein|carb|veggie","tags":["gf","df","veg","vgn"],"prep":10,"cook":30,"servings":6,"ingredients":[{"n":"ingredient name","q":1.5,"u":"lbs","c":"meat|produce|dairy|pantry","p":4.99}],"steps":["Step 1...","Step 2..."]}
-tags: gf=gluten-free,df=dairy-free,veg=vegetarian,vgn=vegan (only include if true).
-p = realistic price per unit in USD. servings = base recipe yield.
-Steps should be detailed and meal-prep friendly. Return ONLY JSON, no markdown.`;
+let mdbCache={};  // store search results by idMeal
 
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'content-type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1024,system:systemPrompt,messages:[{role:'user',content:`Generate a meal prep recipe for: ${prompt}. Dietary restrictions to respect: ${[...S.dietary].join(', ')||'none'}. Exclude: ${S.exclude.join(', ')||'nothing'}.`}]})
-    });
-    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||res.statusText);}
-    const data=await res.json();
-    const text=data.content[0].text.trim();
-    const rec=JSON.parse(text);
-    // Validate and add
-    if(!rec.id||!rec.name||!rec.type) throw new Error('Invalid recipe structure returned');
-    rec.id='ai-'+rec.id+'-'+Date.now();
-    const typeKey=rec.type==='protein'?'protein':rec.type==='carb'?'carb':'veggie';
-    S.selected[typeKey].push(rec);
-    DB[typeKey+'s'].push(rec);
-    div.innerHTML=`<div class="alert alert-ok">✅ Added "${rec.name}" to your ${typeKey} options!</div>`;
-    setTimeout(renderStep2,1500);
-  } catch(err){
-    div.innerHTML=`<div class="alert alert-warn">❌ Error: ${err.message}</div>`;
+function parseMeasure(str){
+  if(!str||!str.trim()) return {q:1,u:''};
+  str=str.trim();
+  const fracs={'1/4':0.25,'1/3':0.333,'1/2':0.5,'2/3':0.667,'3/4':0.75,'1/8':0.125};
+  // mixed number: "1 1/2"
+  let m=str.match(/^(\d+)\s+(\d+\/\d+)\s*(.*)/);
+  if(m) return {q:(+m[1])+(fracs[m[2]]||eval(m[2])||0), u:normaliseUnit(m[3])};
+  // fraction only: "3/4 cup"
+  m=str.match(/^(\d+\/\d+)\s*(.*)/);
+  if(m) return {q:fracs[m[1]]||eval(m[1])||1, u:normaliseUnit(m[2])};
+  // range: "1-2"
+  m=str.match(/^(\d+\.?\d*)\s*[-–]\s*(\d+\.?\d*)\s*(.*)/);
+  if(m) return {q:(+m[1]+ +m[2])/2, u:normaliseUnit(m[3])};
+  // number + unit
+  m=str.match(/^(\d+\.?\d*)\s*(.*)/);
+  if(m) return {q:+m[1]||1, u:normaliseUnit(m[2])};
+  return {q:1, u:normaliseUnit(str)};
+}
+function normaliseUnit(u){
+  u=(u||'').trim().toLowerCase().replace(/\.$/,'');
+  const map={tablespoon:'tbsp',tablespoons:'tbsp',tbs:'tbsp',tbsp:'tbsp',
+    teaspoon:'tsp',teaspoons:'tsp',tsp:'tsp',
+    cup:'cup',cups:'cup',
+    ounce:'oz',ounces:'oz',oz:'oz',
+    pound:'lb',pounds:'lb',lbs:'lb',lb:'lb',
+    gram:'g',grams:'g',g:'g',kilogram:'kg',kilograms:'kg',kg:'kg',
+    milliliter:'ml',milliliters:'ml',ml:'ml',liter:'l',liters:'l',
+    piece:'each',pieces:'each',clove:'each',cloves:'each',
+    can:'can',cans:'can',package:'pkg',packages:'pkg',
+    pinch:'pinch',handful:'handful'};
+  return map[u]||u;
+}
+function guessCat(name){
+  name=name.toLowerCase();
+  const meat=['chicken','beef','pork','turkey','salmon','tuna','shrimp','lamb','sausage','bacon','ham','fish','tilapia','cod','steak','mince','chorizo','duck','prawn'];
+  const dairy=['milk','cheese','cream','butter','yogurt','egg','eggs','parmesan','mozzarella','cheddar','sour cream'];
+  const produce=['onion','garlic','tomato','pepper','broccoli','spinach','carrot','celery','mushroom','zucchini','lemon','lime','apple','potato','sweet potato','lettuce','kale','ginger','cilantro','parsley','basil','cucumber','avocado','corn','squash'];
+  if(meat.some(k=>name.includes(k))) return 'meat';
+  if(dairy.some(k=>name.includes(k))) return 'dairy';
+  if(produce.some(k=>name.includes(k))) return 'produce';
+  return 'pantry';
+}
+function guessPrice(name){
+  name=name.toLowerCase();
+  const p={'chicken breast':5.49,'chicken thigh':4.49,'chicken':5.49,'ground turkey':4.99,'ground beef':5.99,'beef':6.99,'pork':4.99,'salmon':9.99,'shrimp':8.99,'lamb':9.99,'tuna':1.99,'tilapia':5.99,'cod':6.99,'sausage':4.99,'bacon':5.99,'ham':4.49,'turkey':4.99,'pasta':1.49,'rice':0.89,'potato':0.79,'sweet potato':0.89,'flour':0.15,'bread':2.99,'noodle':1.49,'quinoa':3.99,'onion':0.79,'garlic':0.15,'tomato':0.99,'pepper':0.79,'broccoli':1.99,'spinach':2.99,'mushroom':2.49,'zucchini':0.89,'carrot':0.59,'celery':0.99,'lemon':0.79,'lime':0.49,'ginger':0.50,'avocado':1.29,'egg':0.25,'butter':0.35,'milk':0.30,'cream':0.60,'cheese':1.50,'yogurt':0.80,'sour cream':0.75,'olive oil':0.30,'vegetable oil':0.15,'soy sauce':0.30,'coconut milk':1.50,'tomato paste':0.30,'broth':0.50,'stock':0.50,'vinegar':0.20,'honey':0.50,'sugar':0.10,'salt':0.01,'pepper':0.02,'cumin':0.05,'paprika':0.06,'garlic powder':0.05,'onion powder':0.05,'oregano':0.05,'thyme':0.05,'basil':0.10,'chili':0.05,'curry':0.10,'coriander':0.05,'can':0.89};
+  for(const[k,v] of Object.entries(p)) if(name.includes(k)) return v;
+  return 0.50;
+}
+function inferType(category){
+  const proteinCats=['Beef','Chicken','Lamb','Pork','Seafood'];
+  const carbCats=['Pasta','Side','Breakfast','Miscellaneous'];
+  if(proteinCats.includes(category)) return 'protein';
+  if(carbCats.includes(category)) return 'carb';
+  return 'veggie';
+}
+function mealDbToRecipe(meal,type){
+  const ingredients=[];
+  for(let i=1;i<=20;i++){
+    const n=(meal['strIngredient'+i]||'').trim();
+    if(!n) continue;
+    const {q,u}=parseMeasure(meal['strMeasure'+i]||'');
+    ingredients.push({n,q,u,c:guessCat(n),p:guessPrice(n)});
   }
+  const rawSteps=(meal.strInstructions||'').replace(/\r/g,'\n').split('\n').map(s=>s.trim()).filter(s=>s.length>4);
+  const tags=[];
+  if(['Vegetarian','Vegan'].includes(meal.strCategory)) tags.push('veg');
+  return {
+    id:'mdb-'+meal.idMeal,
+    name:meal.strMeal,
+    type,
+    tags,
+    prep:15,
+    cook:30,
+    servings:4,
+    ingredients,
+    steps:rawSteps
+  };
+}
+
+async function searchMealDB(){
+  const q=(document.getElementById('mdbSearch').value||'').trim();
+  if(!q){alert('Enter something to search for.');return;}
+  const div=document.getElementById('mdbResults');
+  div.innerHTML='<div class="alert alert-info">Searching TheMealDB…</div>';
+  try{
+    const r=await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(q)}`);
+    const data=await r.json();
+    const meals=data.meals||[];
+    if(!meals.length){div.innerHTML='<div class="alert alert-warn">No results found. Try a different search term.</div>';return;}
+    mdbCache={};
+    meals.forEach(m=>mdbCache[m.idMeal]=m);
+    // filter out already-added
+    const addedIds=new Set([...S.selected.protein,...S.selected.carb,...S.selected.veggie].map(r=>r.id));
+    div.innerHTML='<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem">'+
+      meals.slice(0,10).map(meal=>{
+        const alreadyAdded=addedIds.has('mdb-'+meal.idMeal);
+        const type=inferType(meal.strCategory);
+        return `<div class="mdb-result">
+          <img class="mdb-thumb" src="${meal.strMealThumb}/preview" loading="lazy" alt="">
+          <div class="mdb-info">
+            <div class="mdb-name">${meal.strMeal}</div>
+            <div class="mdb-cat">${meal.strCategory}</div>
+          </div>
+          <select class="mdb-type-sel" id="mdb-t-${meal.idMeal}" ${alreadyAdded?'disabled':''}>
+            <option value="protein" ${type==='protein'?'selected':''}>Protein</option>
+            <option value="carb" ${type==='carb'?'selected':''}>Carb Side</option>
+            <option value="veggie" ${type==='veggie'?'selected':''}>Veggie Side</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" ${alreadyAdded?'disabled':''} onclick="addMealDbRecipe('${meal.idMeal}')">${alreadyAdded?'✓ Added':'+ Add'}</button>
+        </div>`;
+      }).join('')+
+    '</div>';
+  }catch(err){
+    div.innerHTML=`<div class="alert alert-warn">Error: ${err.message}</div>`;
+  }
+}
+
+function addMealDbRecipe(id){
+  const meal=mdbCache[id];
+  if(!meal){alert('Recipe data not found. Please search again.');return;}
+  const typeEl=document.getElementById('mdb-t-'+id);
+  const type=typeEl?typeEl.value:'protein';
+  const rec=mealDbToRecipe(meal,type);
+  S.selected[type].push(rec);
+  DB[type+'s'].push(rec);
+  // update just the button+select without full re-render so results stay visible
+  const btn=document.querySelector(`[onclick="addMealDbRecipe('${id}')"]`);
+  if(btn){btn.textContent='✓ Added';btn.disabled=true;}
+  if(typeEl) typeEl.disabled=true;
+  // refresh the recipe grid cards at top of step2 without nuking the search results
+  const types=['protein','carb','veggie'];
+  const labels={protein:'🥩 Proteins',carb:'🍚 Carb Sides',veggie:'🥦 Veggie Sides'};
+  types.forEach(t=>{
+    const grid=document.getElementById('grid-'+t);
+    if(grid) grid.innerHTML=S.selected[t].map((r,i)=>recipeCard(r,t,i)).join('');
+  });
+  // reattach rec card click listeners
+  document.querySelectorAll('.rec-card').forEach(card=>{
+    card.addEventListener('click',function(e){
+      if(e.target.closest('.swap-btn')) return;
+      const [,t,i]=this.id.split('-');
+      showRecipeModal(S.selected[t][+i]);
+    });
+  });
+  // update combo count
+  const totalCombos=S.selected.protein.length*S.selected.carb.length*S.selected.veggie.length;
+  const info=document.querySelector('.alert.alert-ok');
+  if(info) info.innerHTML=`<strong>${totalCombos} unique meal combinations</strong> generated for ${S.weeks} week${S.weeks>1?'s':''}
+    (${totalMealSlots()} total meals for ${totalPeople()} people). Click any recipe to see details, or hit Swap to change it.`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1252,8 +1364,6 @@ function goStep2(){
   S.adults=+document.getElementById('adults').value||1;
   S.kids=+document.getElementById('kids').value||0;
   S.budget=+document.getElementById('budget').value||150;
-  const k=document.getElementById('apiKey');
-  if(k){S.apiKey=k.value.trim();localStorage.setItem('mpp_key',S.apiKey);}
   if(!S.meals.length){alert('Please select at least one meal (Lunch or Dinner).');return;}
   autoSelect();
   swapPool={protein:[],carb:[],veggie:[]};
