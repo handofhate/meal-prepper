@@ -659,6 +659,7 @@ const S = {
   dietary: new Set(),
   include: [],
   exclude: [],
+  varietyLevel: 3,
   apiKey: localStorage.getItem('mpp_key')||'',
   selected: { protein:[], carb:[], veggie:[] },
   mealPlan: [],
@@ -698,8 +699,10 @@ function filterRecipes(type){
   });
 }
 function countNeeded(){
-  // ~2 recipes per 7 meal slots so variety stays high
-  return Math.max(2, Math.ceil(totalMealSlots() * 2 / 7));
+  // varietyLevel 1-5 maps to multiplier: 1, 1.5, 2, 3, or "all"
+  const ratios=[1, 1.5, 2, 3, 99];
+  const ratio=ratios[(S.varietyLevel||3)-1];
+  return Math.max(2, Math.ceil(totalMealSlots() * ratio / 7));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -840,6 +843,15 @@ function renderStep1(){
         <label>Total Budget ($)</label>
         <input type="number" id="budget" value="${S.budget}" min="20" step="10" placeholder="e.g. 200">
       </div>
+    </div>
+    <div class="form-group" style="margin-top:.5rem">
+      <label>Recipe Variety — <span id="varietyLabel">${['Minimal (2 recipes/type)','Low','Moderate','High','Maximum (all recipes)'][S.varietyLevel-1]}</span></label>
+      <div class="range-row">
+        <input type="range" id="varietyRange" min="1" max="5" value="${S.varietyLevel}"
+          oninput="S.varietyLevel=+this.value;document.getElementById('varietyLabel').textContent=['Minimal (2 recipes/type)','Low','Moderate','High','Maximum (all recipes)'][S.varietyLevel-1]">
+        <span style="font-size:.75rem;color:var(--muted);white-space:nowrap">1 — 5</span>
+      </div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Pro meal preppers typically use 4–6 different proteins/week. "High" or "Maximum" is recommended for 2+ weeks.</div>
     </div>
   </div>
 
@@ -1181,7 +1193,7 @@ function showRecipeModal(rec){
         ${scale>1?`<span>📈 Scaled ×${scale} for your plan</span>`:''}
       </div>
       <div style="margin-bottom:.75rem">${tags}</div>
-      <h3>Ingredients ${scale>1?`<span style="font-size:.8rem;color:var(--muted)">(scaled for ${Math.round(count*ppl)} servings)</span>`:''}</h3>
+      <h3>Ingredients ${scale>1?`<span style="font-size:.8rem;color:var(--muted)">(scaled for ${scale*rec.servings} servings)</span>`:''}</h3>
       <ul class="ing-list">${ings}</ul>
       <h3>Instructions</h3>
       <ol class="step-list">${rec.steps.map(s=>`<li>${s}</li>`).join('')}</ol>
